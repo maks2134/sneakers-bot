@@ -31,7 +31,6 @@ func main() {
 		log.Fatal("Migration failed:", err)
 	}
 
-	// Вызываем сидер после миграций
 	utils.SeedProducts(db)
 
 	botAPI, err := tgbotapi.NewBotAPI(loadConfig.TelegramToken)
@@ -42,17 +41,28 @@ func main() {
 	botAPI.Debug = false
 	log.Printf("Authorized on account %s", botAPI.Self.UserName)
 
+	// Создаем репозитории
 	userRepo := repository.NewUserRepo(db)
 	productRepo := repository.NewProductRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
 
+	// Создаем сервисы
 	userService := service.NewUserService(userRepo)
 	productService := service.NewProductService(productRepo)
 	orderService := service.NewOrderService(orderRepo)
 
-	// Передаем новый сервис в конструктор
-	botHandler := adapters.NewBotHandler(botAPI, userService, productService, orderService)
+	// НОВЫЙ БЛОК: Создаем и настраиваем адаптер для платежей
+	paymentProvider := adapters.NewSimplePaymentAdapter(
+		"SNEAKERS SHOP",
+		"СБЕР 2202 2002 2002 2002",
+		map[string]string{
+			"USDT (TRC-20)": "T...ВАШ_АДРЕС...XYZ",
+			"BTC":           "bc1...ВАШ_АДРЕС...xyz",
+		},
+	)
 
+	// Передаем все зависимости в обработчик
+	botHandler := adapters.NewBotHandler(botAPI, userService, productService, orderService, paymentProvider)
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := botAPI.GetUpdatesChan(u)
