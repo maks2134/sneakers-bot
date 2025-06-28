@@ -4,12 +4,28 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
 	"snakers-bot/internal/config"
+	"snakers-bot/internal/usecases"
 )
 
 func main() {
 	loadConfig, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Cannot load loadConfig", err)
+	}
+
+	db, err := config.InitDB(loadConfig)
+	if err != nil {
+		log.Fatal("Cannot connect to database:", err)
+	}
+
+	err = db.AutoMigrate(
+		&usecases.User{},
+		&usecases.Product{},
+		&usecases.Order{},
+	)
+
+	if err != nil {
+		log.Fatal("Migration failed:", err)
 	}
 
 	bot, err := tgbotapi.NewBotAPI(loadConfig.TelegramToken)

@@ -11,8 +11,9 @@ const (
 )
 
 type Order struct {
-	OrderId int64              `json:"order_id"`
-	Status  string             `json:"status"`
-	Date    time.Time          `json:"date"`
-	Product map[string]Product `json:"product"`
+	ID       uint        `gorm:"primaryKey"`
+	Status   StatusOrder `gorm:"type:varchar(20)"`
+	Date     time.Time
+	UserID   uint
+	Products []Product `gorm:"many2many:order_products;"`
 }

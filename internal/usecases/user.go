@@ -1,9 +1,11 @@
 package usecases
 
+import "github.com/shopspring/decimal"
+
 type User struct {
-	UserId  int64            `json:"user_id"`
-	Name    string           `json:"name"`
-	Balance float64          `json:"balance"`
-	Loyalty int64            `json:"loyalty"`
-	Orders  map[string]Order `json:"orders"`
+	ID            uint `gorm:"primaryKey"`
+	Name          string
+	Balance       decimal.Decimal `gorm:"type:numeric"`
+	LoyaltyPoints int64
+	Orders        []Order `gorm:"foreignKey:UserID"`
 }
