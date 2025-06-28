@@ -1,6 +1,9 @@
 package usecases
 
-import "time"
+import (
+	"github.com/shopspring/decimal"
+	"time"
+)
 
 type StatusOrder string
 
@@ -16,4 +19,12 @@ type Order struct {
 	Date     time.Time
 	UserID   uint
 	Products []Product `gorm:"many2many:order_products;"`
+}
+
+func (o *Order) TotalPrice() decimal.Decimal {
+	total := decimal.NewFromInt(0)
+	for _, p := range o.Products {
+		total = total.Add(p.Price)
+	}
+	return total
 }

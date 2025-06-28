@@ -1,16 +1,22 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/shopspring/decimal"
 	"log"
+	"snakers-bot/internal/adapters"
 	"snakers-bot/internal/config"
+	"snakers-bot/internal/repository"
+	"snakers-bot/internal/service"
 	"snakers-bot/internal/usecases"
 )
 
 func main() {
 	loadConfig, err := config.LoadConfig()
 	if err != nil {
-		log.Fatal("Cannot load loadConfig", err)
+		log.Fatal("Cannot load config", err)
 	}
 
 	db, err := config.InitDB(loadConfig)
@@ -23,32 +29,41 @@ func main() {
 		&usecases.Product{},
 		&usecases.Order{},
 	)
-
 	if err != nil {
 		log.Fatal("Migration failed:", err)
 	}
 
-	bot, err := tgbotapi.NewBotAPI(loadConfig.TelegramToken)
+	productRepo := repository.NewProductRepository(db)
+	products, _ := productRepo.GetAll(context.Background())
+	if len(products) == 0 {
+		productRepo.Create(context.Background(), &usecases.Product{
+			Name:  "Крутые кроссовки",
+			Price: decimal.NewFromFloat(9990.99),
+		})
+		fmt.Println("Test product created.")
+	}
+
+	botAPI, err := tgbotapi.NewBotAPI(loadConfig.TelegramToken)
 	if err != nil {
 		log.Fatal("Cannot init telegram bot", err)
 	}
 
-	bot.Debug = true
-	log.Printf("Authorized on account %s", bot.Self.UserName)
+	botAPI.Debug = true
+	log.Printf("Authorized on account %s", botAPI.Self.UserName)
+
+	userRepo := repository.NewUserRepo(db)
+
+	userService := service.NewUserService(userRepo)
+	productService := service.NewProductService(productRepo)
+
+	botHandler := adapters.NewBotHandler(botAPI, userService, productService)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	updates, err := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Васап это бот для продажи самых топовых шузов на рынке")
-		_, err = bot.Send(msg)
-		if err != nil {
-			log.Fatal(err)
-		}
+	updates, err := botAPI.GetUpdatesChan(u)
+	if err != nil {
+		log.Fatalf("Failed to get updates channel: %v", err)
 	}
+
+	botHandler.HandleUpdates(updates)
 }
