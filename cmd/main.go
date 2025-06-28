@@ -44,11 +44,14 @@ func main() {
 
 	userRepo := repository.NewUserRepo(db)
 	productRepo := repository.NewProductRepository(db)
+	orderRepo := repository.NewOrderRepository(db)
 
 	userService := service.NewUserService(userRepo)
 	productService := service.NewProductService(productRepo)
+	orderService := service.NewOrderService(orderRepo)
 
-	botHandler := adapters.NewBotHandler(botAPI, userService, productService)
+	// Передаем новый сервис в конструктор
+	botHandler := adapters.NewBotHandler(botAPI, userService, productService, orderService)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60

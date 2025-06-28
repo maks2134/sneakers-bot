@@ -11,24 +11,26 @@ type orderRepository struct {
 	db *gorm.DB
 }
 
-func NewOrderRepository(db *gorm.DB) orderRepository {
-	return orderRepository{db: db}
+// Убедись, что конструктор возвращает интерфейс, а не структуру
+func NewOrderRepository(db *gorm.DB) OrderRepository {
+	return &orderRepository{db: db}
 }
 
-func (r orderRepository) Create(ctx context.Context, order *models.Order) error {
+func (r *orderRepository) Create(ctx context.Context, order *models.Order) error {
 	return r.db.WithContext(ctx).Create(order).Error
 }
 
-func (r orderRepository) GetByID(ctx context.Context, id uint) (*models.Order, error) {
+func (r *orderRepository) GetByID(ctx context.Context, id uint) (*models.Order, error) {
 	var order models.Order
-	return &order, r.db.WithContext(ctx).First(&order, id).Error
+	err := r.db.WithContext(ctx).Preload(clause.Associations).First(&order, id).Error
+	return &order, err
 }
 
-func (r orderRepository) Update(ctx context.Context, order *models.Order) error {
+func (r *orderRepository) Update(ctx context.Context, order *models.Order) error {
 	return r.db.WithContext(ctx).Save(order).Error
 }
 
-func (r orderRepository) Delete(ctx context.Context, id uint) error {
+func (r *orderRepository) Delete(ctx context.Context, id uint) error {
 	return r.db.WithContext(ctx).Delete(&models.Order{}, id).Error
 }
 
