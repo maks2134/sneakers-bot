@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Nike Air Force 1 '07",
+    "description": "Классика, которая никогда не выйдет из моды. Идеальны для любого образа.",
+    "price": "12990.00",
+    "imageUrl": "https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/b7d9211c-26e7-431a-ac24-b0540fb3c00f/air-force-1-07-mens-shoes-5xqQ6q.png"
+  },
+  {
+    "name": "Adidas Campus 00s",
+    "description": "Возвращение иконы 2000-х. Массивный силуэт и премиальная замша.",
+    "price": "11500.50",
+    "imageUrl": "https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/7008149f4329442e8822af4701272e50_9366/Campus_00s_Shoes_Grey_H03470_01_standard.jpg"
+  },
+  {
+    "name": "New Balance 550",
+    "description": "Баскетбольный силуэт 80-х, который стал хитом уличной моды.",
+    "price": "14990.00",
+    "imageUrl": "https://newbalance.ru/upload/iblock/d75/550_1.jpg"
+  }
+]

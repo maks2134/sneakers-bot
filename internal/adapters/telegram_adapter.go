@@ -3,7 +3,7 @@ package adapters
 import (
 	"context"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gorm.io/gorm"
 	"log"
 	"snakers-bot/internal/service"
@@ -46,18 +46,20 @@ func (h *BotHandler) HandleUpdates(updates tgbotapi.UpdatesChannel) {
 func (h *BotHandler) handleStart(ctx context.Context, message *tgbotapi.Message) {
 	telegramID := message.From.ID
 
-	_, err := h.userService.GetUserByTelegramID(ctx, int64(telegramID))
+	_, err := h.userService.GetUserByTelegramID(ctx, telegramID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
+			// ИСПРАВЛЕНО: Добавляем TelegramID при создании
 			newUser := &usecases.User{
-				Name: message.From.UserName,
+				Name:       message.From.UserName,
+				TelegramID: telegramID,
 			}
 			if err := h.userService.CreateUser(ctx, newUser); err != nil {
 				log.Printf("Failed to create user: %v", err)
 				h.sendErrorMessage(message.Chat.ID, "Не удалось создать ваш профиль.")
 				return
 			}
-			log.Printf("New user created: %s", newUser.Name)
+			log.Printf("New user created: %s, with ID: %d", newUser.Name, newUser.TelegramID)
 		} else {
 			log.Printf("Failed to get user: %v", err)
 			h.sendErrorMessage(message.Chat.ID, "Произошла ошибка при поиске вашего профиля.")
@@ -79,19 +81,29 @@ func (h *BotHandler) handleCatalog(ctx context.Context, message *tgbotapi.Messag
 	}
 
 	if len(products) == 0 {
-		msg := tgbotapi.NewMessage(message.Chat.ID, "Каталог пока пуст.")
+		msg := tgbotapi.NewMessage(message.Chat.ID, "Каталог пока пуст. Загляните попозже!")
 		h.bot.Send(msg)
 		return
 	}
 
-	var responseText string
-	for _, p := range products {
-		responseText += fmt.Sprintf("*%s*\nЦена: %s руб.\n\n", p.Name, p.Price.String())
-	}
+	h.bot.Send(tgbotapi.NewMessage(message.Chat.ID, "Вот что у нас есть:"))
 
-	msg := tgbotapi.NewMessage(message.Chat.ID, responseText)
-	msg.ParseMode = "markdown"
-	h.bot.Send(msg)
+	for _, p := range products {
+		caption := fmt.Sprintf(
+			"*%s*\n\n%s\n\nЦена: *%s руб.*",
+			p.Name,
+			p.Description,
+			p.Price.StringFixed(2),
+		)
+
+		photoMsg := tgbotapi.NewPhoto(message.Chat.ID, tgbotapi.FileURL(p.ImageURL))
+		photoMsg.Caption = caption
+		photoMsg.ParseMode = tgbotapi.ModeMarkdown
+
+		if _, err := h.bot.Send(photoMsg); err != nil {
+			log.Printf("Failed to send product photo: %v", err)
+		}
+	}
 }
 
 func (h *BotHandler) handleDefault(message *tgbotapi.Message) {

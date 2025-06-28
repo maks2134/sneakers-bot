@@ -1,16 +1,14 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
-	"github.com/shopspring/decimal"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"snakers-bot/internal/adapters"
 	"snakers-bot/internal/config"
 	"snakers-bot/internal/repository"
 	"snakers-bot/internal/service"
 	"snakers-bot/internal/usecases"
+	"snakers-bot/internal/utils"
 )
 
 func main() {
@@ -33,25 +31,19 @@ func main() {
 		log.Fatal("Migration failed:", err)
 	}
 
-	productRepo := repository.NewProductRepository(db)
-	products, _ := productRepo.GetAll(context.Background())
-	if len(products) == 0 {
-		productRepo.Create(context.Background(), &usecases.Product{
-			Name:  "Крутые кроссовки",
-			Price: decimal.NewFromFloat(9990.99),
-		})
-		fmt.Println("Test product created.")
-	}
+	// Вызываем сидер после миграций
+	utils.SeedProducts(db)
 
 	botAPI, err := tgbotapi.NewBotAPI(loadConfig.TelegramToken)
 	if err != nil {
 		log.Fatal("Cannot init telegram bot", err)
 	}
 
-	botAPI.Debug = true
+	botAPI.Debug = false
 	log.Printf("Authorized on account %s", botAPI.Self.UserName)
 
 	userRepo := repository.NewUserRepo(db)
+	productRepo := repository.NewProductRepository(db)
 
 	userService := service.NewUserService(userRepo)
 	productService := service.NewProductService(productRepo)
@@ -60,10 +52,7 @@ func main() {
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-	updates, err := botAPI.GetUpdatesChan(u)
-	if err != nil {
-		log.Fatalf("Failed to get updates channel: %v", err)
-	}
+	updates := botAPI.GetUpdatesChan(u)
 
 	botHandler.HandleUpdates(updates)
 }
